@@ -62,6 +62,17 @@ def generate_remap_from_config_file(topic_config_file: str,
     return remapping
 
 
+def generate_infra_camera_remapping(node_name: str):
+    """Generate remapping for infra cameras (left and right)"""
+    remappings = [
+        (f'{node_name}/image_0', '/infra1/image_rect_raw_mono'),
+        (f'{node_name}/camera_info_0', '/left/camera_info_rect'),
+        (f'{node_name}/image_1', '/infra2/image_rect_raw_mono'),
+        (f'{node_name}/camera_info_1', '/right/camera_info_rect_fixed'),
+    ]
+    return remappings
+
+
 def create_point_cloud_filter(map_frame: str) -> lut.ComposableNode:
     point_cloud_filter_node = lut.ComposableNode(
         name='point_cloud_filter_node',
@@ -81,7 +92,10 @@ def create_point_cloud_filter(map_frame: str) -> lut.ComposableNode:
 def add_visual_global_localization(args: lu.ArgumentContainer) -> list[lut.Action]:
     node_name = 'visual_localization'
 
-    if lu.is_valid(args.topic_config_file):
+    # Check if using infra cameras
+    if args.vgl_use_infra_cameras:
+        remappings = generate_infra_camera_remapping(node_name)
+    elif lu.is_valid(args.topic_config_file):
         remappings = generate_remap_from_config_file(args.topic_config_file, node_name)
     else:
         camera_names = args.vgl_enabled_stereo_cameras.split(',')
@@ -157,6 +171,7 @@ def generate_launch_description() -> lut.LaunchDescription:
     args.add_arg('vgl_publish_rectified_images', False)
     args.add_arg('vgl_localization_precision_level', 2)
     args.add_arg('topic_config_file', '')
+    args.add_arg('vgl_use_infra_cameras', False)
 
     args.add_opaque_function(add_visual_global_localization)
 
